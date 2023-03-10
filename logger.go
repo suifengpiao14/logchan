@@ -1,4 +1,4 @@
-package tengologger
+package logchan
 
 import "sync"
 
