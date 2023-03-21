@@ -14,7 +14,7 @@ const (
 type LogInforInterface interface {
 	GetName() string
 	Error() error
-	Level() string
+	GetLevel() string
 }
 
 //LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况
