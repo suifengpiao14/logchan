@@ -1,6 +1,11 @@
 package logchan
 
-import "sync"
+import (
+	"context"
+	"sync"
+	"sync/atomic"
+	"time"
+)
 
 const (
 	LOG_LEVEL_FATAL = "fatal"
@@ -24,7 +29,7 @@ var LogInfoChainBuffer int = 50
 var logInfoChain = make(chan LogInforInterface, LogInfoChainBuffer)
 
 var setLoggerWrite sync.Once
-
+var count int64 // 原子计数,用来支持优雅退出
 // SetLoggerWriter 设置日志输出逻辑
 func SetLoggerWriter(fn func(logInfo LogInforInterface, typeName string, err error)) {
 	if fn == nil {
@@ -36,6 +41,7 @@ func SetLoggerWriter(fn func(logInfo LogInforInterface, typeName string, err err
 				recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
 			}()
 			for logInfo := range logInfoChain {
+				atomic.AddInt64(&count, -1)
 				fn(logInfo, logInfo.GetName(), logInfo.Error())
 			}
 		}()
@@ -46,8 +52,28 @@ func SetLoggerWriter(fn func(logInfo LogInforInterface, typeName string, err err
 func SendLogInfo(info LogInforInterface) {
 	select { // 不阻塞写入,避免影响主程序
 	case logInfoChain <- info:
+		atomic.AddInt64(&count, 1)
 		return
 	default:
 		return
+	}
+}
+
+//IsFinished 检测管道日志是否全部输出
+func IsFinished() (yes bool) {
+	return atomic.LoadInt64(&count) <= 0
+}
+
+//UntilFinished 阻塞，直到所有日志处理完,maxInterval 处理日志最长时间
+func UntilFinished(maxInterval time.Duration) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, maxInterval)
+	defer cancel()
+	select {
+	case <-time.After(1 * time.Microsecond):
+		if IsFinished() {
+			cancel()
+		}
+	case <-ctx.Done():
 	}
 }
