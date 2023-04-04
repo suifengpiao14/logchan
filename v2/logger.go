@@ -2,6 +2,7 @@ package logchan
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,11 +39,18 @@ func SetLoggerWriter(fn func(logInfo LogInforInterface, typeName string, err err
 	setLoggerWrite.Do(func() {
 		go func() {
 			defer func() {
-				recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
+				result := recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
+				if result != nil {
+					msg := fmt.Sprintf("logchan.setLoggerWrite.Do recover result:%v", result)
+					fmt.Println(msg)
+				}
 			}()
 			for logInfo := range logInfoChain {
-				atomic.AddInt64(&count, -1)
-				fn(logInfo, logInfo.GetName(), logInfo.Error())
+				func(logInfo LogInforInterface) {
+					defer atomic.AddInt64(&count, -1) // 确保函数执行后操作计数
+					fn(logInfo, logInfo.GetName(), logInfo.Error())
+				}(logInfo)
+
 			}
 		}()
 	})
@@ -64,16 +72,20 @@ func IsFinished() (yes bool) {
 	return atomic.LoadInt64(&count) <= 0
 }
 
-//UntilFinished 阻塞，直到所有日志处理完,maxInterval 处理日志最长时间
-func UntilFinished(maxInterval time.Duration) {
+//UntilFinished 阻塞，直到所有日志处理完,timeout 等待处理超时时间
+func UntilFinished(timeout time.Duration) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, maxInterval)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	select {
-	case <-time.After(1 * time.Microsecond):
-		if IsFinished() {
-			cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			time.Sleep(10 * time.Millisecond)
+			if IsFinished() {
+				return
+			}
 		}
-	case <-ctx.Done():
 	}
 }
