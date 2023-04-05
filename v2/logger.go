@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -18,12 +20,34 @@ const (
 )
 
 type LogInforInterface interface {
-	GetName() string
-	Error() error
-	GetLevel() string
+	GetName() (name string)
+	Error() (err error)
+	GetLevel() (level string)
 }
 
-//LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况
+var (
+	ERROR_NOT_IMPLEMENTED = errors.New("not implemented")
+)
+
+type EmptyLogInfo struct {
+}
+
+func (l *EmptyLogInfo) GetName() (name string) {
+	err := errors.WithMessage(ERROR_NOT_IMPLEMENTED, "GetName")
+	panic(err)
+}
+
+func (l *EmptyLogInfo) Error() (err error) {
+	err = errors.WithMessage(ERROR_NOT_IMPLEMENTED, "Error")
+	panic(err)
+}
+
+func (l *EmptyLogInfo) GetLevel() (name string) {
+	err := errors.WithMessage(ERROR_NOT_IMPLEMENTED, "GetLevel")
+	panic(err)
+}
+
+// LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况
 var LogInfoChainBuffer int = 50
 
 // logInfoChain 日志传送通道，缓冲区满后,会丢弃日志
@@ -67,12 +91,12 @@ func SendLogInfo(info LogInforInterface) {
 	}
 }
 
-//IsFinished 检测管道日志是否全部输出
+// IsFinished 检测管道日志是否全部输出
 func IsFinished() (yes bool) {
 	return atomic.LoadInt64(&count) <= 0
 }
 
-//UntilFinished 阻塞，直到所有日志处理完,timeout 等待处理超时时间
+// UntilFinished 阻塞，直到所有日志处理完,timeout 等待处理超时时间
 func UntilFinished(timeout time.Duration) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, timeout)
