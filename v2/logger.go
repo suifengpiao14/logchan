@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -52,64 +51,76 @@ var LogInfoChainBuffer int = 50
 
 // logInfoChain 日志传送通道，缓冲区满后,会丢弃日志
 var logInfoChain = make(chan LogInforInterface, LogInfoChainBuffer)
+var setLoggerWriteOnce sync.Once
+var sendLogInfoFn func(logInfo LogInforInterface) //只能初始化一次
+var doneChan chan struct{}
 
-var setLoggerWrite sync.Once
-var count int64 // 原子计数,用来支持优雅退出
-// SetLoggerWriter 设置日志输出逻辑
-func SetLoggerWriter(fn func(logInfo LogInforInterface, typeName string, err error)) {
-	if fn == nil {
+// SetLoggerWriter 设置日志处理函数，同时返回发送日志函数
+func SetLoggerWriter(ctx context.Context, handlerLogInfoFn func(logInfo LogInforInterface, typeName string, err error)) {
+	if handlerLogInfoFn == nil {
 		return
 	}
-	setLoggerWrite.Do(func() {
+	setLoggerWriteOnce.Do(func() {
 		go func() {
 			defer func() {
+				doneChan <- struct{}{} // 通知日志写入结束
+				close(doneChan)
 				result := recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
 				if result != nil {
-					msg := fmt.Sprintf("logchan.setLoggerWrite.Do recover result:%v", result)
+					msg := fmt.Sprintf("logchan.setLoggerWriteOnce.Do recover result:%v", result)
 					fmt.Println(msg)
 				}
 			}()
 			for logInfo := range logInfoChain {
 				func(logInfo LogInforInterface) {
-					defer atomic.AddInt64(&count, -1) // 确保函数执行后操作计数
-					fn(logInfo, logInfo.GetName(), logInfo.Error())
+					handlerLogInfoFn(logInfo, logInfo.GetName(), logInfo.Error())
 				}(logInfo)
 
 			}
 		}()
-	})
 
+		go func() {
+			select {
+			case <-ctx.Done():
+				close(logInfoChain)
+				return
+			}
+		}()
+
+		sendLogInfoFn = func(logInfo LogInforInterface) {
+			select {
+			case logInfoChain <- logInfo:
+				return
+			default:
+				return
+
+			}
+		}
+	})
+	return
 }
 
-func SendLogInfo(info LogInforInterface) {
-	select { // 不阻塞写入,避免影响主程序
-	case logInfoChain <- info:
-		atomic.AddInt64(&count, 1)
-		return
-	default:
+func SendLogInfo(logInfo LogInforInterface) {
+	if sendLogInfoFn == nil {
 		return
 	}
-}
-
-// IsFinished 检测管道日志是否全部输出
-func IsFinished() (yes bool) {
-	return atomic.LoadInt64(&count) <= 0
+	sendLogInfoFn(logInfo)
 }
 
 // UntilFinished 阻塞，直到所有日志处理完,timeout 等待处理超时时间
-func UntilFinished(timeout time.Duration) {
+func UntilFinished(timeout time.Duration, closeLogInfoChan bool) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			time.Sleep(10 * time.Millisecond)
-			if IsFinished() {
-				return
-			}
+	if closeLogInfoChan && logInfoChain != nil {
+		close(logInfoChain)
+	}
+	select {
+	case <-ctx.Done():
+		if !closeLogInfoChan && logInfoChain != nil {
+			close(logInfoChain)
 		}
+		<-doneChan //阻塞 确保已有的日志被处理完毕
+	case <-doneChan:
 	}
 }
