@@ -7,19 +7,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	LOG_LEVEL_FATAL = "fatal"
-	LOG_LEVEL_ERROR = "error"
-	LOG_LEVEL_WARN  = "warn"
-	LOG_LEVEL_INFO  = "info"
-	LOG_LEVEL_DEBUG = "debug"
-	LOG_LEVEL_TRACE = "trace"
-)
-
 type LogInforInterface interface {
 	GetName() (name string)
 	Error() (err error)
-	GetLevel() (level string)
 }
 
 var (
@@ -39,11 +29,6 @@ func (l *EmptyLogInfo) Error() (err error) {
 	panic(err)
 }
 
-func (l *EmptyLogInfo) GetLevel() (name string) {
-	err := errors.WithMessage(ERROR_NOT_IMPLEMENTED, "GetLevel")
-	panic(err)
-}
-
 // LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况
 var LogInfoChainBuffer int = 50
 
@@ -58,13 +43,13 @@ func SetLoggerWriter(handlerLogInfoFn func(logInfo LogInforInterface, typeName s
 	}
 
 	setLoggerWriteOnce.Do(func() {
-		var doneChan = make(chan struct{}, 1) //设置缓冲后，不会阻塞当前携程
+		var doneChan = make(chan struct{}, 1) //设置缓冲后，不会阻塞当前协程
 		// logInfoChain 日志传送通道，缓冲区满后,会丢弃日志
 		var logInfoChain = make(chan LogInforInterface, LogInfoChainBuffer)
 		// 启动监听
 		go func() {
 			defer func() {
-				doneChan <- struct{}{} // 通知日志写入结束
+				doneChan <- struct{}{} // 通知日志处理完成
 				close(doneChan)
 				result := recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
 				if result != nil {
@@ -96,7 +81,6 @@ func SetLoggerWriter(handlerLogInfoFn func(logInfo LogInforInterface, typeName s
 
 	})
 
-	return
 }
 
 func SendLogInfo(logInfo LogInforInterface) {
