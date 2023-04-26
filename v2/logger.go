@@ -7,8 +7,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+type LogName interface {
+	String() (name string)
+}
+
 type LogInforInterface interface {
-	GetName() (name string)
+	GetName() (logName LogName) // 当logchan 应用广泛后，字符串 name 容易冲突，建议在具体包内定义 string 别名方式解决该问题
 	Error() (err error)
 }
 
@@ -19,7 +23,7 @@ var (
 type EmptyLogInfo struct {
 }
 
-func (l *EmptyLogInfo) GetName() (name string) {
+func (l *EmptyLogInfo) GetName() (name LogName) {
 	err := errors.WithMessage(ERROR_NOT_IMPLEMENTED, "GetName")
 	panic(err)
 }
@@ -37,7 +41,7 @@ var sendLogInfoFn func(logInfo LogInforInterface) //只能初始化一次
 var closeLogChan func()
 
 // SetLoggerWriter 设置日志处理函数，同时返回发送日志函数
-func SetLoggerWriter(handlerLogInfoFn func(logInfo LogInforInterface, typeName string, err error)) {
+func SetLoggerWriter(handlerLogInfoFn func(logInfo LogInforInterface, logName LogName, err error)) {
 	if handlerLogInfoFn == nil {
 		return
 	}
