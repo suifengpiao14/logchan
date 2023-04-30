@@ -20,6 +20,12 @@ var (
 	ERROR_NOT_IMPLEMENTED = errors.New("not implemented")
 )
 
+// MakeTypeError 生成类型错误
+func MakeTypeError(l LogInforInterface) (err error) {
+	err = errors.Errorf("type error: excetp:%s,got:%T", l.GetName().String(), l)
+	return err
+}
+
 type EmptyLogInfo struct {
 }
 
