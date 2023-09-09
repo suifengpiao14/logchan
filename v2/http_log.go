@@ -37,7 +37,7 @@ func (h *HttpLogInfo) Error() (err error) {
 	return err
 }
 func (h *HttpLogInfo) BeforSend() {
-	h.Curl, _ = h.CURLCli()
+	h.Curl, _ = h.CURLCli() // 此处的err不能影响业务error
 }
 
 // CURLCli 生成curl 命令
