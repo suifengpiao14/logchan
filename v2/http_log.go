@@ -20,6 +20,7 @@ type HttpLogInfo struct {
 	Url     string          `json:"url"`
 	Input   string          `json:"input"`
 	Output  string          `json:"output"`
+	Curl    string          `json:"curl"`
 	Err     error
 }
 type DefaultLogName string
@@ -28,14 +29,16 @@ func (l DefaultLogName) String() string {
 	return string(l)
 }
 
-func (h HttpLogInfo) GetName() (logName LogName) {
+func (h *HttpLogInfo) GetName() (logName LogName) {
 	return HttpLogInfoName
 }
 
-func (h HttpLogInfo) Error() (err error) {
+func (h *HttpLogInfo) Error() (err error) {
 	return err
 }
-func (h HttpLogInfo) BeforSend() {}
+func (h *HttpLogInfo) BeforSend() {
+	h.Curl, _ = h.CURLCli()
+}
 
 // CURLCli 生成curl 命令
 func (h HttpLogInfo) CURLCli() (curlCli string, err error) {
