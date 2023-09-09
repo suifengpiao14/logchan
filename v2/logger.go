@@ -14,6 +14,7 @@ type LogName interface {
 type LogInforInterface interface {
 	GetName() (logName LogName) // 当logchan 应用广泛后，字符串 name 容易冲突，建议在具体包内定义 string 别名方式解决该问题
 	Error() (err error)
+	BeforSend() // 在发送前,整理数据,如运行函数填充数据
 }
 
 var (
@@ -37,6 +38,8 @@ func (l *EmptyLogInfo) GetName() (name LogName) {
 func (l *EmptyLogInfo) Error() (err error) {
 	err = errors.WithMessage(ERROR_NOT_IMPLEMENTED, "Error")
 	panic(err)
+}
+func (l *EmptyLogInfo) BeforSend() {
 }
 
 // LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况

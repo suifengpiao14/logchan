@@ -35,6 +35,7 @@ func (h HttpLogInfo) GetName() (logName LogName) {
 func (h HttpLogInfo) Error() (err error) {
 	return err
 }
+func (h HttpLogInfo) BeforSend() {}
 
 // CURLCli 生成curl 命令
 func (h HttpLogInfo) CURLCli() (curlCli string, err error) {

@@ -28,6 +28,8 @@ func (l *LogInfoTest) Error() (err error) {
 	return l.err
 }
 
+func (l *LogInfoTest) BeforSend() {}
+
 func TestMakeTypeError(t *testing.T) {
 	logInfo := LogInfoTest{}
 	err := logchan.MakeTypeError(&logInfo)
