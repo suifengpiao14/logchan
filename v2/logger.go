@@ -100,6 +100,7 @@ func SendLogInfo(logInfo LogInforInterface) {
 	if sendLogInfoFn == nil {
 		return
 	}
+	logInfo.BeforSend()
 	sendLogInfoFn(logInfo)
 }
 
