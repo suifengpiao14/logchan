@@ -19,6 +19,7 @@ const (
 
 type LogInfoTest struct {
 	err error
+	logchan.EmptyLogInfo
 }
 
 func (l *LogInfoTest) GetName() (logName logchan.LogName) {
@@ -34,4 +35,9 @@ func TestMakeTypeError(t *testing.T) {
 	logInfo := LogInfoTest{}
 	err := logchan.MakeTypeError(&logInfo)
 	fmt.Println(err.Error())
+}
+
+func TestSessionID(t *testing.T) {
+	s := logchan.SessionID()
+	fmt.Println(s)
 }
