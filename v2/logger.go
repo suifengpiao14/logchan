@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cast"
 	"github.com/suifengpiao14/funcs"
 )
 
@@ -40,6 +41,9 @@ func (l *EmptyLogInfo) SetContext(ctx context.Context) {
 	l.ctx = ctx
 }
 func (l *EmptyLogInfo) GetContext() (ctx context.Context) {
+	if l.ctx == nil {
+		ctx = context.Background()
+	}
 	return l.ctx
 }
 
@@ -101,6 +105,9 @@ const (
 
 func SendLogInfo(logInfo LogInforInterface) {
 	ctx := logInfo.GetContext()
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	ctx = context.WithValue(ctx, Context_Name_GoroutineID, funcs.GoroutineID())
 	ctx = context.WithValue(ctx, Context_Name_SessionID, SessionID())
 	logInfo.SetContext(ctx)
@@ -111,6 +118,22 @@ func SendLogInfo(logInfo LogInforInterface) {
 		return
 
 	}
+}
+
+//GetGoroutineID 从日志记录中获取协程ID
+func GetGoroutineID(logInfo LogInforInterface) (goroutineID string) {
+	ctx := logInfo.GetContext()
+	i := ctx.Value(Context_Name_GoroutineID)
+	goroutineID = cast.ToString(i)
+	return goroutineID
+}
+
+//GetGoroutineID 从日志记录中获取ip、进程、协程ID
+func GetSessionID(logInfo LogInforInterface) (sessionID string) {
+	ctx := logInfo.GetContext()
+	i := ctx.Value(Context_Name_SessionID)
+	sessionID = cast.ToString(i)
+	return sessionID
 }
 
 func CloseLogChan() {
