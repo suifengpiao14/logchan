@@ -115,6 +115,7 @@ func SendLogInfo(logInfo LogInforInterface) {
 	ctx = context.WithValue(ctx, Context_Name_GoroutineID, funcs.GoroutineID())
 	ctx = context.WithValue(ctx, Context_Name_SessionID, SessionID())
 	logInfo.SetContext(ctx)
+	logInfo.BeforSend() // 发送前执行格式化（在当前携程执行,方便调试，符合通道仅仅传递消息的原则,即便消息被序列化为字符串，也能执行）
 	select {
 	case logInfoChain <- logInfo:
 		return
