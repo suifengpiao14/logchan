@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,9 @@ var (
 	ERROR_NOT_IMPLEMENTED = errors.New("not implemented")
 )
 
+//LogWriter 外部可以指定日志写入句柄,默认标准输出
+var LogWriter io.Writer = os.Stdout
+
 // MakeTypeError 生成类型错误
 func MakeTypeError(l LogInforInterface) (err error) {
 	err = errors.Errorf("type error: excetp:%s,got:%T", l.GetName().String(), l)
@@ -42,7 +46,7 @@ func (l *EmptyLogInfo) SetContext(ctx context.Context) {
 }
 func (l *EmptyLogInfo) GetContext() (ctx context.Context) {
 	if l.ctx == nil {
-		ctx = context.Background()
+		l.ctx = context.Background()
 	}
 	return l.ctx
 }

@@ -39,6 +39,23 @@ func (h *HttpLogInfo) BeforSend() {
 	h.Curl, _ = h.CURLCli() // 此处的err不能影响业务error
 }
 
+//DefaultPrintWatchFileLog 默认日志打印函数
+func DefaultPrintWatchFileLog(logInfo LogInforInterface, typeName LogName, err error) {
+	if typeName != HttpLogInfoName {
+		return
+	}
+	httpLogInfo, ok := logInfo.(*HttpLogInfo)
+	if !ok {
+		return
+	}
+	if err != nil {
+		fmt.Fprintf(LogWriter, "loginInfo:%s,error:%s", httpLogInfo.GetName(), err.Error())
+		return
+	}
+	curlcmd, _ := httpLogInfo.CURLCli()
+	fmt.Fprintf(LogWriter, "curl:%s", curlcmd)
+}
+
 // CURLCli 生成curl 命令
 func (h HttpLogInfo) CURLCli() (curlCli string, err error) {
 	switch strings.ToUpper(h.Method) {
