@@ -1,7 +1,6 @@
 package logchan
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,14 +13,14 @@ const (
 )
 
 type HttpLogInfo struct {
-	Context context.Context `json:"context"`
-	Name    string          `json:"name"`
-	Method  string          `json:"method"`
-	Url     string          `json:"url"`
-	Input   string          `json:"input"`
-	Output  string          `json:"output"`
-	Curl    string          `json:"curl"`
-	Err     error
+	Name   string `json:"name"`
+	Method string `json:"method"`
+	Url    string `json:"url"`
+	Input  string `json:"input"`
+	Output string `json:"output"`
+	Curl   string `json:"curl"`
+	Err    error
+	EmptyLogInfo
 }
 type DefaultLogName string
 
