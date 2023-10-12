@@ -21,7 +21,7 @@ type LogInforInterface interface {
 	GetContext() (ctx context.Context) // 增加上下文，方便统一增加协程ID、链路追踪id等通用变量
 	GetName() (logName LogName)        // 当logchan 应用广泛后，字符串 name 容易冲突，建议在具体包内定义 string 别名方式解决该问题
 	Error() (err error)
-	BeforSend() // 在发送前,整理数据,如运行函数填充数据
+	BeforeSend() // 在发送前,整理数据,如运行函数填充数据
 }
 
 var (
@@ -60,7 +60,7 @@ func (l *EmptyLogInfo) Error() (err error) {
 	err = errors.WithMessage(ERROR_NOT_IMPLEMENTED, "Error")
 	panic(err)
 }
-func (l *EmptyLogInfo) BeforSend() {
+func (l *EmptyLogInfo) BeforeSend() {
 }
 
 // LogInfoChainBuffer 日志缓冲区,减少并发日志丢失情况
@@ -115,7 +115,7 @@ func SendLogInfo(logInfo LogInforInterface) {
 	ctx = context.WithValue(ctx, Context_Name_GoroutineID, funcs.GoroutineID())
 	ctx = context.WithValue(ctx, Context_Name_SessionID, SessionID())
 	logInfo.SetContext(ctx)
-	logInfo.BeforSend() // 发送前执行格式化（在当前携程执行,方便调试，符合通道仅仅传递消息的原则,即便消息被序列化为字符串，也能执行）
+	logInfo.BeforeSend() // 发送前执行格式化（在当前携程执行,方便调试，符合通道仅仅传递消息的原则,即便消息被序列化为字符串，也能执行）
 	select {
 	case logInfoChain <- logInfo:
 		return

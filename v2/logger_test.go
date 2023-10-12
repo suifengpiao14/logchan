@@ -29,7 +29,7 @@ func (l *LogInfoTest) Error() (err error) {
 	return l.err
 }
 
-func (l *LogInfoTest) BeforSend() {}
+func (l *LogInfoTest) BeforeSend() {}
 
 func TestMakeTypeError(t *testing.T) {
 	logInfo := LogInfoTest{}
