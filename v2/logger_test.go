@@ -2,6 +2,7 @@ package logchan_test
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/suifengpiao14/logchan/v2"
@@ -40,4 +41,20 @@ func TestMakeTypeError(t *testing.T) {
 func TestSessionID(t *testing.T) {
 	s := logchan.SessionID()
 	fmt.Println(s)
+}
+
+func TestGetRunInfoFromFrames(t *testing.T) {
+	logInfo := &LogInfoTest{}
+	FnA(logInfo)
+	frams := logchan.GetCallersFrames(logInfo)
+	filename, fullFuncName, line := logchan.GetCallStackInfoFromFrames(frams, func(filename, fullFuncName string, line int, frame runtime.Frame) (ok bool) {
+		return true
+	})
+	fmt.Println(filename, fullFuncName, line)
+}
+
+func FnA(logInfo *LogInfoTest) {
+	defer func() {
+		logchan.SendLogInfo(logInfo)
+	}()
 }

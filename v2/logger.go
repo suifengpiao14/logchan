@@ -2,14 +2,12 @@ package logchan
 
 import (
 	"context"
-	"crypto/md5"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/cast"
-	"github.com/suifengpiao14/funcs"
 )
 
 type LogName interface {
@@ -29,7 +27,7 @@ var (
 )
 
 //LogWriter 外部可以指定日志写入句柄,默认标准输出
-var LogWriter io.Writer = os.Stdout
+var LogWriter io.WriteCloser = os.Stdout
 
 // MakeTypeError 生成类型错误
 func MakeTypeError(l LogInforInterface) (err error) {
@@ -79,6 +77,7 @@ func init() {
 	// 初始化监听
 	go func() {
 		defer func() {
+			LogWriter.Close()
 			doneChan <- struct{}{} // 通知日志处理完成
 			close(doneChan)
 			result := recover() // 此处由错误，直接丢弃，无法输出，可探讨是否可以输出到标准输出
@@ -102,19 +101,11 @@ func SetLoggerWriter(handlerLogInfoFns ...LogInfoHandlerFn) {
 
 type LogVaraible string
 
-const (
-	Context_Name_GoroutineID LogVaraible = "GoroutineID"
-	Context_Name_SessionID   LogVaraible = "SessionID"
-)
-
 func SendLogInfo(logInfo LogInforInterface) {
-	ctx := logInfo.GetContext()
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	ctx = context.WithValue(ctx, Context_Name_GoroutineID, funcs.GoroutineID())
-	ctx = context.WithValue(ctx, Context_Name_SessionID, SessionID())
-	logInfo.SetContext(ctx)
+	setGoroutineID(logInfo)
+	setProcessSessionID(logInfo)
+	setCallersFrames(logInfo)
+	setRunTime(logInfo)
 	logInfo.BeforeSend() // 发送前执行格式化（在当前携程执行,方便调试，符合通道仅仅传递消息的原则,即便消息被序列化为字符串，也能执行）
 	select {
 	case logInfoChain <- logInfo:
@@ -125,32 +116,29 @@ func SendLogInfo(logInfo LogInforInterface) {
 	}
 }
 
-//GetGoroutineID 从日志记录中获取协程ID
-func GetGoroutineID(logInfo LogInforInterface) (goroutineID string) {
-	ctx := logInfo.GetContext()
-	i := ctx.Value(Context_Name_GoroutineID)
-	goroutineID = cast.ToString(i)
-	return goroutineID
-}
-
-//GetGoroutineID 从日志记录中获取ip、进程、协程ID
-func GetSessionID(logInfo LogInforInterface) (sessionID string) {
-	ctx := logInfo.GetContext()
-	i := ctx.Value(Context_Name_SessionID)
-	sessionID = cast.ToString(i)
-	return sessionID
-}
-
 func CloseLogChan() {
 	close(logInfoChain)
 	<-doneChan
 }
 
-func SessionID() string {
-	goid := funcs.GoroutineID()
-	ip, _ := funcs.GetIp()
-	s := fmt.Sprintf("%s-%d-%d-%d", ip, os.Getppid(), os.Getpid(), goid)
-	digestBytes := md5.Sum([]byte(s))
-	md5Str := fmt.Sprintf("%x", digestBytes)
-	return md5Str[0:16]
+// GetCallStackInfoFromFrames 获取运行时文件、函数、行号信息
+func GetCallStackInfoFromFrames(frames *runtime.Frames, filterFn func(filename, fullFuncName string, line int, frame runtime.Frame) (ok bool)) (filename string, fullFuncName string, line int) {
+	for {
+		frame, hasNext := frames.Next()
+		if !hasNext {
+			break
+		}
+		filename = frame.File
+		fullFuncName = frame.Function
+		line = frame.Line
+		if filterFn(filename, fullFuncName, line, frame) {
+			break
+		}
+	}
+	return filename, fullFuncName, line
+}
+
+//DefaultFramesFilterFn  默认调用栈过滤函数，返回发起 logchan.SendLogInfo 的函数信息
+func DefaultFramesFilterFn(filename, fullFuncName string, line int, frame runtime.Frame) (ok bool) {
+	return true
 }
