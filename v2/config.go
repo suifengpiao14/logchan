@@ -43,7 +43,7 @@ func SetConfig(c *Config) (err error) {
 		if err != nil {
 			return err
 		}
-		f, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND, *configInstance.ModePerm)
+		f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, *configInstance.ModePerm)
 		if err != nil {
 			return err
 		}
