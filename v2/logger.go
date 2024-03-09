@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/pkg/errors"
+	"github.com/suifengpiao14/funcs"
 )
 
 type LogName interface {
@@ -97,7 +98,7 @@ func init() {
 // SetLoggerWriter 设置日志处理函数，同时返回发送日志函数
 func SetLoggerWriter(handlerLogInfoFns ...LogInfoHandlerFn) {
 	for _, h := range handlerLogInfoFns {
-		if h == nil {
+		if funcs.IsNil(h) {
 			continue
 		}
 		_handlerLogInfoFns = append(_handlerLogInfoFns, h)

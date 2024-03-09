@@ -6,7 +6,7 @@ require (
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.5.1
-	github.com/suifengpiao14/funcs v0.0.9
+	github.com/suifengpiao14/funcs v0.0.18
 )
 
 require (
