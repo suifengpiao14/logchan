@@ -96,7 +96,12 @@ func init() {
 
 // SetLoggerWriter 设置日志处理函数，同时返回发送日志函数
 func SetLoggerWriter(handlerLogInfoFns ...LogInfoHandlerFn) {
-	_handlerLogInfoFns = append(_handlerLogInfoFns, handlerLogInfoFns...)
+	for _, h := range handlerLogInfoFns {
+		if h == nil {
+			continue
+		}
+		_handlerLogInfoFns = append(_handlerLogInfoFns, h)
+	}
 }
 
 type LogVaraible string
